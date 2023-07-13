@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>661</width>
+    <height>425</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>HMC8043 Supply Control</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QPushButton" name="btnConnect">
+        <property name="text">
+         <string>Connect</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnDisconnect">
+        <property name="text">
+         <string>Disconnect</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="HMCChannelWidget" name="wdgChannel1" native="true"/>
+      </item>
+      <item>
+       <widget class="HMCChannelWidget" name="wdgChannel2" native="true"/>
+      </item>
+      <item>
+       <widget class="HMCChannelWidget" name="wdgChannel3" native="true"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QToolButton" name="btnMasterOutEnable">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QToolButton:checked {
+	background-color: red;
+	border-style: inset;
+	border-width: 1px;
+	border-color: darkgray;
+	border-radius: 3px;
+	color: white;
+	padding: 2px;
+}
+
+QToolButton {
+	background-color: lightgray;
+	border-style: outset;
+	border-width: 1px;
+	border-color: gray;
+	border-radius: 3px;
+	color: darkgray;
+	padding: 2px;
+}</string>
+      </property>
+      <property name="text">
+       <string>Master Output Enable</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+      <property name="toolButtonStyle">
+       <enum>Qt::ToolButtonTextOnly</enum>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>661</width>
+     <height>24</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>HMCChannelWidget</class>
+   <extends>QWidget</extends>
+   <header>hmcchannelwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
