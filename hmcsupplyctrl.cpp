@@ -206,6 +206,7 @@ void HMCSupplyCtrl::setPeriodicUpdateEnable(bool enable)
   if(enable ==  _periodicUpdateEnable) {
     return;
   }
+  _periodicUpdateEnable = enable;
   if(enable) {
     _periodicUpdateTmr->start(PERIODIC_UPDATE_INTERVAL_MS);
   } else {
@@ -251,6 +252,9 @@ void HMCSupplyCtrl::socketError(QAbstractSocket::SocketError err)
  */
 void HMCSupplyCtrl::onPeriodicTimer()
 {
+  if(!_periodicUpdateEnable) {
+    return;
+  }
   for(auto ch : hmcChannels) {
     updateChannelCurrent(ch);
     updateChannelVoltage(ch);
