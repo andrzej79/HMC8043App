@@ -2,7 +2,8 @@
 #include <QDebug>
 #include "hmcsupplyctrl.h"
 
-#define SOCK_TIMEOUT_MS 4000
+#define SOCK_TIMEOUT_MS             4000
+#define PERIODIC_UPDATE_INTERVAL_MS 100
 
 const std::array<HMCSupplyCtrl::HMCChannel, HMCChannelCount> HMCSupplyCtrl::hmcChannels{Channel1, Channel2, Channel3};
 
@@ -14,18 +15,43 @@ const std::array<HMCSupplyCtrl::HMCChannel, HMCChannelCount> HMCSupplyCtrl::hmcC
 HMCSupplyCtrl::HMCSupplyCtrl(QObject *parent)
     : QObject{parent}
 {
-  connect(&_thread, &QThread::started, this, &HMCSupplyCtrl::threadStarted);
+  initObjects();
+  createConnections();
 
   moveToThread(&_thread);
   _thread.start();
 }
 
+/**
+ * @brief HMCSupplyCtrl::~HMCSupplyCtrl
+ */
 HMCSupplyCtrl::~HMCSupplyCtrl()
 {
   _thread.quit();
   _thread.wait(QDeadlineTimer(5000));
 }
 
+/**
+ * @brief HMCSupplyCtrl::initObjects
+ */
+void HMCSupplyCtrl::initObjects()
+{
+  _periodicUpdateTmr = new QTimer(this);
+  _periodicUpdateTmr->setSingleShot(true);
+}
+
+/**
+ * @brief HMCSupplyCtrl::createConnections
+ */
+void HMCSupplyCtrl::createConnections()
+{
+  connect(&_thread, &QThread::started, this, &HMCSupplyCtrl::threadStarted);
+  connect(_periodicUpdateTmr, &QTimer::timeout, this, &HMCSupplyCtrl::onPeriodicTimer);
+}
+
+/**
+ * @brief HMCSupplyCtrl::createSocketConnections
+ */
 void HMCSupplyCtrl::createSocketConnections()
 {
   connect(_tcpSock, &QTcpSocket::connected, this, &HMCSupplyCtrl::socketConnected);
@@ -33,6 +59,11 @@ void HMCSupplyCtrl::createSocketConnections()
   connect(_tcpSock, &QAbstractSocket::errorOccurred, this, &HMCSupplyCtrl::socketError);
 }
 
+/**
+ * @brief HMCSupplyCtrl::sendCmdLine
+ * @param cmd
+ * @return device response string
+ */
 QString HMCSupplyCtrl::sendCmdLine(QString cmd)
 {
   QString response;
@@ -52,11 +83,18 @@ QString HMCSupplyCtrl::sendCmdLine(QString cmd)
   return response;
 }
 
+/**
+ * @brief HMCSupplyCtrl::cleanup
+ */
 void HMCSupplyCtrl::cleanup()
 {
   moveToThread(qApp->thread());
 }
 
+/**
+ * @brief HMCSupplyCtrl::deviceConnect
+ * @param addr
+ */
 void HMCSupplyCtrl::deviceConnect(const QHostAddress &addr)
 {
   if(_tcpSock) {
@@ -69,6 +107,9 @@ void HMCSupplyCtrl::deviceConnect(const QHostAddress &addr)
   _tcpSock->waitForConnected(SOCK_TIMEOUT_MS);
 }
 
+/**
+ * @brief HMCSupplyCtrl::deviceDisconnect
+ */
 void HMCSupplyCtrl::deviceDisconnect()
 {
   if(_tcpSock) {
@@ -82,6 +123,10 @@ void HMCSupplyCtrl::deviceDisconnect()
   }
 }
 
+/**
+ * @brief HMCSupplyCtrl::updateChannelVoltage
+ * @param chNr
+ */
 void HMCSupplyCtrl::updateChannelVoltage(HMCChannel chNr)
 {
   bool parseOk = false;
@@ -94,6 +139,10 @@ void HMCSupplyCtrl::updateChannelVoltage(HMCChannel chNr)
   emit channelVoltageChanged(chNr, volt);
 }
 
+/**
+ * @brief HMCSupplyCtrl::updateChannelCurrent
+ * @param chNr
+ */
 void HMCSupplyCtrl::updateChannelCurrent(HMCChannel chNr)
 {
   bool parseOk = false;
@@ -106,29 +155,67 @@ void HMCSupplyCtrl::updateChannelCurrent(HMCChannel chNr)
   emit channelCurrentChanged(chNr, curr);
 }
 
+/**
+ * @brief HMCSupplyCtrl::setChannelVoltage
+ * @param chNr
+ * @param voltage
+ */
 void HMCSupplyCtrl::setChannelVoltage(HMCChannel chNr, double voltage)
 {
   sendCmdLine(QString::asprintf("INST OUT%d", chNr));
   sendCmdLine(QString::asprintf("VOLT %.3f", voltage));
 }
 
+/**
+ * @brief HMCSupplyCtrl::setChannelCurrent
+ * @param chNr
+ * @param current
+ */
 void HMCSupplyCtrl::setChannelCurrent(HMCChannel chNr, double current)
 {
   sendCmdLine(QString::asprintf("INST OUT%d", chNr));
   sendCmdLine(QString::asprintf("CURR %.3f", current));
 }
 
+/**
+ * @brief HMCSupplyCtrl::setChannelOutEnable
+ * @param chNr
+ * @param enable
+ */
 void HMCSupplyCtrl::setChannelOutEnable(HMCChannel chNr, bool enable)
 {
   sendCmdLine(QString::asprintf("INST OUT%d", chNr));
   sendCmdLine(QString::asprintf("OUTP:CHAN %s", (enable ? "ON" : "OFF")));
 }
 
+/**
+ * @brief HMCSupplyCtrl::setMasterOutEnable
+ * @param enable
+ */
 void HMCSupplyCtrl::setMasterOutEnable(bool enable)
 {
   sendCmdLine(QString::asprintf("OUTP:MAST %s", (enable ? "ON" : "OFF")));
 }
 
+/**
+ * @brief HMCSupplyCtrl::setPeriodicUpdateEnable
+ * @param enable
+ */
+void HMCSupplyCtrl::setPeriodicUpdateEnable(bool enable)
+{
+  if(enable ==  _periodicUpdateEnable) {
+    return;
+  }
+  if(enable) {
+    _periodicUpdateTmr->start(PERIODIC_UPDATE_INTERVAL_MS);
+  } else {
+    _periodicUpdateTmr->stop();
+  }
+}
+
+/**
+ * @brief HMCSupplyCtrl::threadStarted
+ */
 void HMCSupplyCtrl::threadStarted()
 {
   qDebug() << Q_FUNC_INFO << "thread started";
@@ -141,21 +228,32 @@ void HMCSupplyCtrl::socketConnected()
   emit deviceConnected();
 }
 
+/**
+ * @brief HMCSupplyCtrl::socketDisconnected
+ */
 void HMCSupplyCtrl::socketDisconnected()
 {
   qDebug() << Q_FUNC_INFO << "socket disconnected";
   emit deviceDisconnected();
 }
 
+/**
+ * @brief HMCSupplyCtrl::socketError
+ * @param err
+ */
 void HMCSupplyCtrl::socketError(QAbstractSocket::SocketError err)
 {
   qCritical() << Q_FUNC_INFO << err;
 }
 
-void HMCSupplyCtrl::onRefreshTmr()
+/**
+ * @brief HMCSupplyCtrl::onPeriodicTimer
+ */
+void HMCSupplyCtrl::onPeriodicTimer()
 {
   for(auto ch : hmcChannels) {
     updateChannelCurrent(ch);
     updateChannelVoltage(ch);
   }
+  _periodicUpdateTmr->start(PERIODIC_UPDATE_INTERVAL_MS);
 }

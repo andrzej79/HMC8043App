@@ -5,6 +5,10 @@
 #include "valuesetdialog.h"
 #include "ui_hmcchannelwidget.h"
 
+/**
+ * @brief HMCChannelWidget::HMCChannelWidget
+ * @param parent
+ */
 HMCChannelWidget::HMCChannelWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::HMCChannelWidget)
@@ -12,11 +16,20 @@ HMCChannelWidget::HMCChannelWidget(QWidget *parent) :
   ui->setupUi(this);
 }
 
+/**
+ * @brief HMCChannelWidget::~HMCChannelWidget
+ */
 HMCChannelWidget::~HMCChannelWidget()
 {
   delete ui;
 }
 
+/**
+ * @brief HMCChannelWidget::setupWidget
+ * @param hmcCtrl
+ * @param channel
+ * @param channelName
+ */
 void HMCChannelWidget::setupWidget(HMCSupplyCtrl *hmcCtrl, HMCSupplyCtrl::HMCChannel channel, const QString &channelName)
 {
   Q_ASSERT(hmcCtrl != nullptr);
@@ -32,6 +45,9 @@ void HMCChannelWidget::setupWidget(HMCSupplyCtrl *hmcCtrl, HMCSupplyCtrl::HMCCha
   ui->lcdVoltage->setStyleSheet("QLCDNumber{color: rgb(0,128,0)}");
 }
 
+/**
+ * @brief HMCChannelWidget::createConnections
+ */
 void HMCChannelWidget::createConnections()
 {
   connect(ui->btnSetVoltage, &QPushButton::clicked, this, &HMCChannelWidget::btnSetVoltageClicked);
@@ -49,13 +65,9 @@ void HMCChannelWidget::createConnections()
 
 }
 
-void HMCChannelWidget::refreshHMCData()
-{
-  Q_ASSERT(_hmcCtrl != nullptr);
-  emit updateChannelVoltage(_channel);
-  emit updateChannelCurrent(_channel);
-}
-
+/**
+ * @brief HMCChannelWidget::btnSetVoltageClicked
+ */
 void HMCChannelWidget::btnSetVoltageClicked()
 {
   ValueSetDialog *dlg = new ValueSetDialog(this);
@@ -69,6 +81,9 @@ void HMCChannelWidget::btnSetVoltageClicked()
   dlg->deleteLater();
 }
 
+/**
+ * @brief HMCChannelWidget::btnSetCurrentClicked
+ */
 void HMCChannelWidget::btnSetCurrentClicked()
 {
   ValueSetDialog *dlg = new ValueSetDialog(this);
@@ -82,11 +97,19 @@ void HMCChannelWidget::btnSetCurrentClicked()
   dlg->deleteLater();
 }
 
+/**
+ * @brief HMCChannelWidget::cbChannelOutEnableClicked
+ */
 void HMCChannelWidget::cbChannelOutEnableClicked()
 {
   emit setChannelOutEnable(_channel, ui->cbOutEnable->isChecked());
 }
 
+/**
+ * @brief HMCChannelWidget::channelVoltageChanged
+ * @param chNr
+ * @param voltage
+ */
 void HMCChannelWidget::channelVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, double voltage)
 {
   if(chNr != _channel) {
@@ -95,6 +118,11 @@ void HMCChannelWidget::channelVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, dou
   ui->lcdVoltage->display(QString::asprintf("%.2f", voltage));
 }
 
+/**
+ * @brief HMCChannelWidget::channelCurrentChanged
+ * @param chNr
+ * @param current
+ */
 void HMCChannelWidget::channelCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, double current)
 {
   if(chNr != _channel) {

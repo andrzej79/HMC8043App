@@ -25,9 +25,6 @@ private:
 
   void createConnections();
 
-public slots:
-  void refreshHMCData();
-
 private slots:
   void btnSetVoltageClicked();
   void btnSetCurrentClicked();

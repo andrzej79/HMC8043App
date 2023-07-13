@@ -23,7 +23,6 @@ protected:
 private:
   Ui::MainWindow *ui;
   HMCSupplyCtrl _hmcCtrl;
-  QTimer _devUpdateTmr;
 
   void createConnections();
   void registerMetaTypes();
@@ -41,5 +40,6 @@ signals:
   void deviceConnect(const QHostAddress &addr);
   void deviceDisconnect();
   void setMasterOutEnable(bool enable);
+  void setPeriodicUpdateEnable(bool enable);
 };
 #endif // MAINWINDOW_H

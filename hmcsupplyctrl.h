@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QThread>
+#include <QTimer>
 #include <array>
 
 #define HMC_SCPI_PORT 5025
@@ -28,7 +29,11 @@ public:
 private:
   QTcpSocket *_tcpSock = nullptr;
   QThread _thread;
+  QTimer *_periodicUpdateTmr = nullptr;
+  bool _periodicUpdateEnable = false;
 
+  void initObjects();
+  void createConnections();
   void createSocketConnections();
   QString sendCmdLine(QString cmd);
 
@@ -42,13 +47,14 @@ public slots:
   void setChannelCurrent(HMCChannel chNr, double current);
   void setChannelOutEnable(HMCChannel chNr, bool enable);
   void setMasterOutEnable(bool enable);
+  void setPeriodicUpdateEnable(bool enable);
 
 private slots:
   void threadStarted();
   void socketConnected();
   void socketDisconnected();
   void socketError(QAbstractSocket::SocketError err);
-  void onRefreshTmr();
+  void onPeriodicTimer();
 
 signals:
   void deviceConnected();
