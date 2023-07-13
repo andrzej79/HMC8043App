@@ -16,6 +16,7 @@ public:
   ~ValueSetDialog();
   void setUnitString(const QString &name);
   double getValue() const;
+  void setValue(double value);
 
 private:
   Ui::ValueSetDialog *ui;

@@ -34,6 +34,7 @@ private slots:
 
   void deviceConnected();
   void deviceDisconnected();
+  void masterOutEnableChanged(bool enabled);
 
 signals:
   void cleanupRequst();

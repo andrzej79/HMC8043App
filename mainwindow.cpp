@@ -19,6 +19,12 @@ MainWindow::MainWindow(QWidget *parent)
   ui->wdgChannel1->setupWidget(&_hmcCtrl, HMCSupplyCtrl::Channel1, "Channel 1");
   ui->wdgChannel2->setupWidget(&_hmcCtrl, HMCSupplyCtrl::Channel2, "Channel 2");
   ui->wdgChannel3->setupWidget(&_hmcCtrl, HMCSupplyCtrl::Channel3, "Channel 3");
+
+  ui->wdgChannel1->setEnabled(false);
+  ui->wdgChannel2->setEnabled(false);
+  ui->wdgChannel3->setEnabled(false);
+  ui->btnMasterOutEnable->setEnabled(false);
+  ui->btnDisconnect->setEnabled(false);
 }
 
 /**
@@ -51,6 +57,7 @@ void MainWindow::createConnections()
 
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceConnected, this, &MainWindow::deviceConnected);
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceDisconnected, this, &MainWindow::deviceDisconnected);
+  connect(&_hmcCtrl, &HMCSupplyCtrl::masterOutEnableChanged, this, &MainWindow::masterOutEnableChanged);
 
   connect(this, &MainWindow::cleanupRequst, &_hmcCtrl, &HMCSupplyCtrl::cleanup, Qt::BlockingQueuedConnection);
   connect(this, &MainWindow::deviceConnect, &_hmcCtrl, &HMCSupplyCtrl::deviceConnect);
@@ -99,6 +106,14 @@ void MainWindow::btnMasterOutEnableClicked()
 void MainWindow::deviceConnected()
 {
   emit setPeriodicUpdateEnable(true);
+  ui->wdgChannel1->setEnabled(true);
+  ui->wdgChannel2->setEnabled(true);
+  ui->wdgChannel3->setEnabled(true);
+  ui->btnMasterOutEnable->setEnabled(true);
+  ui->btnConnect->setEnabled(false);
+  ui->btnDisconnect->setEnabled(true);
+
+
 }
 
 /**
@@ -107,5 +122,22 @@ void MainWindow::deviceConnected()
 void MainWindow::deviceDisconnected()
 {
   emit setPeriodicUpdateEnable(false);
+  ui->wdgChannel1->setEnabled(false);
+  ui->wdgChannel2->setEnabled(false);
+  ui->wdgChannel3->setEnabled(false);
+  ui->btnMasterOutEnable->setEnabled(false);
+  ui->btnMasterOutEnable->setChecked(false);
+  ui->btnConnect->setEnabled(true);
+  ui->btnDisconnect->setEnabled(false);
+}
+
+/**
+ * @brief MainWindow::masterOutEnableChanged
+ * @param enabled
+ */
+void MainWindow::masterOutEnableChanged(bool enabled)
+{
+  QSignalBlocker block(ui->btnMasterOutEnable);
+  ui->btnMasterOutEnable->setChecked(enabled);
 }
 

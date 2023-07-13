@@ -4,6 +4,7 @@
 
 #define SOCK_TIMEOUT_MS             4000
 #define PERIODIC_UPDATE_INTERVAL_MS 100
+#define CH_TO_ARRAY_INDEX(x) ((int)x - 1)
 
 const std::array<HMCSupplyCtrl::HMCChannel, HMCChannelCount> HMCSupplyCtrl::hmcChannels{Channel1, Channel2, Channel3};
 
@@ -29,6 +30,36 @@ HMCSupplyCtrl::~HMCSupplyCtrl()
 {
   _thread.quit();
   _thread.wait(QDeadlineTimer(5000));
+}
+
+/**
+ * @brief HMCSupplyCtrl::getChannelTargetVoltage
+ * @param chNr
+ * @return channel target voltage
+ */
+double HMCSupplyCtrl::getChannelTargetVoltage(HMCChannel chNr) const
+{
+  return _channelTargetVoltage[CH_TO_ARRAY_INDEX(chNr)];
+}
+
+/**
+ * @brief HMCSupplyCtrl::getChannelTargetCurrent
+ * @param chNr
+ * @return channel target current
+ */
+double HMCSupplyCtrl::getChannelTargetCurrent(HMCChannel chNr) const
+{
+  return _channelTargetCurrent[CH_TO_ARRAY_INDEX(chNr)];
+}
+
+/**
+ * @brief HMCSupplyCtrl::isChannelEnabled
+ * @param chNr
+ * @return true if enabled
+ */
+bool HMCSupplyCtrl::isChannelEnabled(HMCChannel chNr)
+{
+  return _channelEnabled[CH_TO_ARRAY_INDEX(chNr)];
 }
 
 /**
@@ -84,6 +115,18 @@ QString HMCSupplyCtrl::sendCmdLine(QString cmd)
 }
 
 /**
+ * @brief HMCSupplyCtrl::channelSelect
+ * @param chNr
+ */
+void HMCSupplyCtrl::channelSelect(HMCChannel chNr)
+{
+  if(_selChannel != chNr) {
+    sendCmdLine(QString("INST OUT%1").arg(chNr));
+    _selChannel = chNr;
+  }
+}
+
+/**
  * @brief HMCSupplyCtrl::cleanup
  */
 void HMCSupplyCtrl::cleanup()
@@ -101,6 +144,7 @@ void HMCSupplyCtrl::deviceConnect(const QHostAddress &addr)
     _tcpSock->close();
     _tcpSock->deleteLater();
   }
+  _selChannel = NoChannel;
   _tcpSock = new QTcpSocket(this);
   createSocketConnections();
   _tcpSock->connectToHost(addr, HMC_SCPI_PORT);
@@ -133,7 +177,7 @@ void HMCSupplyCtrl::updateChannelVoltage(HMCChannel chNr)
   QString strCurr;
   double volt;
 
-  sendCmdLine(QString("INST OUT%1").arg(chNr));;
+  channelSelect(chNr);
   strCurr = sendCmdLine("MEAS:VOLT?");
   volt = strCurr.toDouble(&parseOk);
   emit channelVoltageChanged(chNr, volt);
@@ -149,10 +193,72 @@ void HMCSupplyCtrl::updateChannelCurrent(HMCChannel chNr)
   QString strCurr;
   double curr;
 
-  sendCmdLine(QString("INST OUT%1").arg(chNr));;
+  channelSelect(chNr);
   strCurr = sendCmdLine("MEAS:CURR?");
   curr = strCurr.toDouble(&parseOk);
   emit channelCurrentChanged(chNr, curr);
+}
+
+/**
+ * @brief HMCSupplyCtrl::updateChannelTargetVoltage
+ * @param chNr
+ */
+void HMCSupplyCtrl::updateChannelTargetVoltage(HMCChannel chNr)
+{
+  bool parseOk = false;
+  QString strVal;
+  double val;
+  channelSelect(chNr);
+  strVal = sendCmdLine("VOLT?");
+  val = strVal.toDouble(&parseOk);
+  _channelTargetVoltage[CH_TO_ARRAY_INDEX(chNr)] = val;
+  emit channelTargetVoltageChanged(chNr, val);
+}
+
+/**
+ * @brief HMCSupplyCtrl::updateChannelTargetCurrent
+ * @param chNr
+ */
+void HMCSupplyCtrl::updateChannelTargetCurrent(HMCChannel chNr)
+{
+  bool parseOk = false;
+  QString strVal;
+  double val;
+  channelSelect(chNr);
+  strVal = sendCmdLine("CURR?");
+  val = strVal.toDouble(&parseOk);
+  _channelTargetCurrent[CH_TO_ARRAY_INDEX(chNr)] = val;
+  emit channelTargetCurrentChanged(chNr, val);
+}
+
+/**
+ * @brief HMCSupplyCtrl::updateChannelOutEnable
+ * @param chNr
+ */
+void HMCSupplyCtrl::updateChannelOutEnable(HMCChannel chNr)
+{
+  bool parseOk = false;
+  QString strVal;
+  double val;
+  channelSelect(chNr);
+  strVal = sendCmdLine("OUTP:CHAN?");
+  val = strVal.toDouble(&parseOk);
+  _channelEnabled[CH_TO_ARRAY_INDEX(chNr)] = val;
+  emit channelOutEnableChanged(chNr, val);
+}
+
+/**
+ * @brief HMCSupplyCtrl::updateMasterOutEnable
+ */
+void HMCSupplyCtrl::updateMasterOutEnable()
+{
+  bool parseOk = false;
+  QString strVal;
+  double val;
+  strVal = sendCmdLine("OUTP:MAST?");
+  val = strVal.toDouble(&parseOk);
+  _masterOutEnabled = val;
+  emit masterOutEnableChanged(_masterOutEnabled);
 }
 
 /**
@@ -162,8 +268,9 @@ void HMCSupplyCtrl::updateChannelCurrent(HMCChannel chNr)
  */
 void HMCSupplyCtrl::setChannelVoltage(HMCChannel chNr, double voltage)
 {
-  sendCmdLine(QString::asprintf("INST OUT%d", chNr));
+  channelSelect(chNr);
   sendCmdLine(QString::asprintf("VOLT %.3f", voltage));
+  updateChannelTargetVoltage(chNr);
 }
 
 /**
@@ -173,8 +280,9 @@ void HMCSupplyCtrl::setChannelVoltage(HMCChannel chNr, double voltage)
  */
 void HMCSupplyCtrl::setChannelCurrent(HMCChannel chNr, double current)
 {
-  sendCmdLine(QString::asprintf("INST OUT%d", chNr));
+  channelSelect(chNr);
   sendCmdLine(QString::asprintf("CURR %.3f", current));
+  updateChannelTargetCurrent(chNr);
 }
 
 /**
@@ -184,7 +292,7 @@ void HMCSupplyCtrl::setChannelCurrent(HMCChannel chNr, double current)
  */
 void HMCSupplyCtrl::setChannelOutEnable(HMCChannel chNr, bool enable)
 {
-  sendCmdLine(QString::asprintf("INST OUT%d", chNr));
+  channelSelect(chNr);
   sendCmdLine(QString::asprintf("OUTP:CHAN %s", (enable ? "ON" : "OFF")));
 }
 
@@ -226,6 +334,14 @@ void HMCSupplyCtrl::socketConnected()
 {
   qDebug() << Q_FUNC_INFO << "socket connected";
   qDebug() << sendCmdLine("*IDN?");
+  for(auto ch : hmcChannels) {
+    updateChannelVoltage(ch);
+    updateChannelCurrent(ch);
+    updateChannelTargetVoltage(ch);
+    updateChannelTargetCurrent(ch);
+    updateChannelOutEnable(ch);
+  }
+  updateMasterOutEnable();
   emit deviceConnected();
 }
 

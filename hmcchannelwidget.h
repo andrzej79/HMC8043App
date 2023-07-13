@@ -29,12 +29,15 @@ private slots:
   void btnSetVoltageClicked();
   void btnSetCurrentClicked();
   void cbChannelOutEnableClicked();
+
+  void deviceDisconnected();
   void channelVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, double voltage);
   void channelCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, double current);
+  void channelOutEnableChanged(HMCSupplyCtrl::HMCChannel chNr, bool enabled);
+  void channelTargetVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, double voltage);
+  void channelTargetCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, double current);
 
 signals:
-  void updateChannelVoltage(HMCSupplyCtrl::HMCChannel chNr);
-  void updateChannelCurrent(HMCSupplyCtrl::HMCChannel chNr);
   void setChannelVoltage(HMCSupplyCtrl::HMCChannel chNr, double voltage);
   void setChannelCurrent(HMCSupplyCtrl::HMCChannel chNr, double current);
   void setChannelOutEnable(HMCSupplyCtrl::HMCChannel chNr, bool enable);

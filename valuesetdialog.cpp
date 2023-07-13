@@ -46,6 +46,17 @@ double ValueSetDialog::getValue() const
 }
 
 /**
+ * @brief ValueSetDialog::setValue
+ * @param value
+ */
+void ValueSetDialog::setValue(double value)
+{
+  QSignalBlocker block(ui->edValue);
+  _value = value;
+  ui->edValue->setText(QString::number(value, 'f', 3));
+}
+
+/**
  * @brief ValueSetDialog::parseValue
  * @return
  */

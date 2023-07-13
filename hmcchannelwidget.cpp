@@ -43,6 +43,7 @@ void HMCChannelWidget::setupWidget(HMCSupplyCtrl *hmcCtrl, HMCSupplyCtrl::HMCCha
 
   ui->lcdCurrent->setStyleSheet("QLCDNumber{color: red;}");
   ui->lcdVoltage->setStyleSheet("QLCDNumber{color: rgb(0,128,0)}");
+  deviceDisconnected();
 }
 
 /**
@@ -54,11 +55,13 @@ void HMCChannelWidget::createConnections()
   connect(ui->btnSetCurrent, &QPushButton::clicked, this, &HMCChannelWidget::btnSetCurrentClicked);
   connect(ui->cbOutEnable, &QCheckBox::clicked, this, &HMCChannelWidget::cbChannelOutEnableClicked);
 
+  connect(_hmcCtrl, &HMCSupplyCtrl::deviceDisconnected, this, &HMCChannelWidget::deviceDisconnected);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelCurrentChanged, this, &HMCChannelWidget::channelCurrentChanged);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelVoltageChanged, this, &HMCChannelWidget::channelVoltageChanged);
+  connect(_hmcCtrl, &HMCSupplyCtrl::channelTargetCurrentChanged, this, &HMCChannelWidget::channelTargetCurrentChanged);
+  connect(_hmcCtrl, &HMCSupplyCtrl::channelTargetVoltageChanged, this, &HMCChannelWidget::channelTargetVoltageChanged);
+  connect(_hmcCtrl, &HMCSupplyCtrl::channelOutEnableChanged, this, &HMCChannelWidget::channelOutEnableChanged);
 
-  connect(this, &HMCChannelWidget::updateChannelVoltage, _hmcCtrl, &HMCSupplyCtrl::updateChannelVoltage);
-  connect(this, &HMCChannelWidget::updateChannelCurrent, _hmcCtrl, &HMCSupplyCtrl::updateChannelCurrent);
   connect(this, &HMCChannelWidget::setChannelVoltage, _hmcCtrl, &HMCSupplyCtrl::setChannelVoltage);
   connect(this, &HMCChannelWidget::setChannelCurrent, _hmcCtrl, &HMCSupplyCtrl::setChannelCurrent);
   connect(this, &HMCChannelWidget::setChannelOutEnable, _hmcCtrl, &HMCSupplyCtrl::setChannelOutEnable);
@@ -73,6 +76,7 @@ void HMCChannelWidget::btnSetVoltageClicked()
   ValueSetDialog *dlg = new ValueSetDialog(this);
   dlg->setUnitString("V");
   dlg->setWindowTitle("Set Voltage Value");
+  dlg->setValue(_hmcCtrl->getChannelTargetVoltage(_channel));
   auto dlgRes = dlg->exec();
   if(dlgRes == QDialog::Accepted) {
     auto v = std::clamp(dlg->getValue(), 0.0, 99.0);
@@ -89,6 +93,7 @@ void HMCChannelWidget::btnSetCurrentClicked()
   ValueSetDialog *dlg = new ValueSetDialog(this);
   dlg->setUnitString("A");
   dlg->setWindowTitle("Set Current Value");
+  dlg->setValue(_hmcCtrl->getChannelTargetCurrent(_channel));
   auto dlgRes = dlg->exec();
   if(dlgRes == QDialog::Accepted) {
     auto v = std::clamp(dlg->getValue(), 0.0, 5.0);
@@ -103,6 +108,18 @@ void HMCChannelWidget::btnSetCurrentClicked()
 void HMCChannelWidget::cbChannelOutEnableClicked()
 {
   emit setChannelOutEnable(_channel, ui->cbOutEnable->isChecked());
+}
+
+/**
+ * @brief HMCChannelWidget::deviceDisconnected
+ */
+void HMCChannelWidget::deviceDisconnected()
+{
+  ui->lcdVoltage->display("-.---");
+  ui->lcdCurrent->display("-.---");
+  ui->lbTargetCurrent->setText("-.---");
+  ui->lbTargetVoltage->setText("-.---");
+  ui->cbOutEnable->setChecked(false);
 }
 
 /**
@@ -130,3 +147,45 @@ void HMCChannelWidget::channelCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, dou
   }
   ui->lcdCurrent->display(QString::asprintf("%.3f", current));
 }
+
+/**
+ * @brief HMCChannelWidget::channelOutEnableChanged
+ * @param chNr
+ * @param enabled
+ */
+void HMCChannelWidget::channelOutEnableChanged(HMCSupplyCtrl::HMCChannel chNr, bool enabled)
+{
+  if(chNr != _channel) {
+    return;
+  }
+  QSignalBlocker block(ui->cbOutEnable);
+  ui->cbOutEnable->setChecked(enabled);
+}
+
+/**
+ * @brief HMCChannelWidget::channelTargetVoltageChanged
+ * @param chNr
+ * @param voltage
+ */
+void HMCChannelWidget::channelTargetVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, double voltage)
+{
+  if(chNr != _channel) {
+    return;
+  }
+  ui->lbTargetVoltage->setText(QString::asprintf("%.3f V", voltage));
+}
+
+/**
+ * @brief HMCChannelWidget::channelTargetCurrentChanged
+ * @param chNr
+ * @param current
+ */
+void HMCChannelWidget::channelTargetCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, double current)
+{
+  if(chNr != _channel) {
+    return;
+  }
+  ui->lbTargetCurrent->setText(QString::asprintf("%.3f A", current));
+}
+
+

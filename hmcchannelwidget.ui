@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>303</width>
-    <height>330</height>
+    <width>305</width>
+    <height>314</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,9 +19,9 @@
      <property name="title">
       <string>Channel Title</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="2,2,0,0,0">
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="2,2,0,0,0,0">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="5,10">
+       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="5,10,0">
         <item>
          <widget class="QLabel" name="lbVoltage">
           <property name="text">
@@ -45,10 +45,17 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>V</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="5,10">
+       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="5,10,0">
         <item>
          <widget class="QLabel" name="lbCurrent">
           <property name="text">
@@ -69,6 +76,13 @@
           </property>
           <property name="segmentStyle">
            <enum>QLCDNumber::Flat</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>A</string>
           </property>
          </widget>
         </item>
@@ -95,20 +109,65 @@
        </spacer>
       </item>
       <item>
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QPushButton" name="btnSetVoltage">
-          <property name="text">
-           <string>Set Voltage</string>
-          </property>
-         </widget>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QLabel" name="lbTargetVoltage">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>24.000V</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnSetVoltage">
+            <property name="text">
+             <string>Set Voltage</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
-         <widget class="QPushButton" name="btnSetCurrent">
-          <property name="text">
-           <string>Set Current</string>
-          </property>
-         </widget>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QLabel" name="lbTargetCurrent">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>1.000A</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnSetCurrent">
+            <property name="text">
+             <string>Set Current</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
