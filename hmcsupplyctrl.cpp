@@ -3,7 +3,7 @@
 #include "hmcsupplyctrl.h"
 
 #define SOCK_TIMEOUT_MS             4000
-#define PERIODIC_UPDATE_INTERVAL_MS 100
+#define PERIODIC_UPDATE_INTERVAL_MS 500
 #define CH_TO_ARRAY_INDEX(x) ((int)x - 1)
 
 const std::array<HMCSupplyCtrl::HMCChannel, HMCChannelCount> HMCSupplyCtrl::hmcChannels{Channel1, Channel2, Channel3};
@@ -148,7 +148,12 @@ void HMCSupplyCtrl::deviceConnect(const QHostAddress &addr)
   _tcpSock = new QTcpSocket(this);
   createSocketConnections();
   _tcpSock->connectToHost(addr, HMC_SCPI_PORT);
-  _tcpSock->waitForConnected(SOCK_TIMEOUT_MS);
+  if(_tcpSock->waitForConnected(SOCK_TIMEOUT_MS)) {
+    qDebug() << Q_FUNC_INFO << "socket successfuly connected";
+  } else {
+    qWarning() << Q_FUNC_INFO << "socket connect failed!";
+    emit deviceConnectionFailed();
+  }
 }
 
 /**
@@ -332,6 +337,9 @@ void HMCSupplyCtrl::threadStarted()
 
 void HMCSupplyCtrl::socketConnected()
 {
+  _tcpSock->waitForReadyRead(1000);
+  _tcpSock->readAll();
+
   qDebug() << Q_FUNC_INFO << "socket connected";
   qDebug() << sendCmdLine("*IDN?");
   for(auto ch : hmcChannels) {

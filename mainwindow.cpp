@@ -1,6 +1,10 @@
 #include <QCloseEvent>
 #include <QHostAddress>
+#include <QMessageBox>
+#include <QSettings>
 #include "mainwindow.h"
+#include "hmcappglobal.h"
+#include "hostaddrconfigdialog.h"
 #include "./ui_mainwindow.h"
 
 /**
@@ -54,8 +58,10 @@ void MainWindow::createConnections()
   connect(ui->btnConnect, &QPushButton::clicked, this, &MainWindow::btnConnectClicked);
   connect(ui->btnDisconnect, &QPushButton::clicked, this, &MainWindow::btnDisconnectClicked);
   connect(ui->btnMasterOutEnable, &QToolButton::clicked, this, &MainWindow::btnMasterOutEnableClicked);
+  connect(ui->actionSetHostAddress, &QAction::triggered, this, &MainWindow::actSetHostAddress);
 
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceConnected, this, &MainWindow::deviceConnected);
+  connect(&_hmcCtrl, &HMCSupplyCtrl::deviceConnectionFailed, this, &MainWindow::deviceConnectionFailed);
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceDisconnected, this, &MainWindow::deviceDisconnected);
   connect(&_hmcCtrl, &HMCSupplyCtrl::masterOutEnableChanged, this, &MainWindow::masterOutEnableChanged);
 
@@ -80,7 +86,13 @@ void MainWindow::registerMetaTypes()
  */
 void MainWindow::btnConnectClicked()
 {
-  emit deviceConnect(QHostAddress("192.168.12.100"));
+  ui->btnConnect->setEnabled(false);
+  QSettings s;
+  QHostAddress addr;
+
+  addr = QHostAddress(s.value(SKEY_HOSTADDR, DEFAULT_HOST).toString());
+
+  emit deviceConnect(addr);
 }
 
 /**
@@ -101,6 +113,29 @@ void MainWindow::btnMasterOutEnableClicked()
 }
 
 /**
+ * @brief MainWindow::actSetHostAddress
+ */
+void MainWindow::actSetHostAddress()
+{
+  QSettings s;
+  qDebug() << Q_FUNC_INFO;
+  HostAddrConfigDialog *dlg = new HostAddrConfigDialog(this);
+  dlg->setCurrentAddr(s.value(SKEY_HOSTADDR, DEFAULT_HOST).toString());
+
+  auto res = dlg->exec();
+  if(res == QDialog::Accepted) {
+    QHostAddress addr(dlg->getAddr());
+    qDebug() << Q_FUNC_INFO << "configuring Host Address:" << addr << addr.isNull() << addr.isUniqueLocalUnicast();
+    if(addr.isNull() == false) {
+      qDebug() << Q_FUNC_INFO << "new configured Host Address:" << addr;
+      s.setValue(SKEY_HOSTADDR, addr.toString());
+    }
+  }
+
+  dlg->deleteLater();
+}
+
+/**
  * @brief MainWindow::deviceConnected
  */
 void MainWindow::deviceConnected()
@@ -112,8 +147,15 @@ void MainWindow::deviceConnected()
   ui->btnMasterOutEnable->setEnabled(true);
   ui->btnConnect->setEnabled(false);
   ui->btnDisconnect->setEnabled(true);
+}
 
-
+/**
+ * @brief MainWindow::deviceConnectionFailed
+ */
+void MainWindow::deviceConnectionFailed()
+{
+  QMessageBox::critical(this, "Error!", "Device Connection Failed!");
+  ui->btnConnect->setEnabled(true);
 }
 
 /**

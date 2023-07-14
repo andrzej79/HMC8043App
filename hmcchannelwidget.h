@@ -22,6 +22,8 @@ private:
   HMCSupplyCtrl *_hmcCtrl = nullptr;
   HMCSupplyCtrl::HMCChannel _channel;
   QString _channelName;
+  static const QList<double> _voltagePresets;
+  static const QList<double> _currentPresets;
 
   void createConnections();
 

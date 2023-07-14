@@ -35,6 +35,10 @@ set(PROJECT_SOURCES
         valuesetdialog.h
         valuesetdialog.cpp
         valuesetdialog.ui
+        hostaddrconfigdialog.h
+        hostaddrconfigdialog.cpp
+        hostaddrconfigdialog.ui
+        hmcappglobal.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

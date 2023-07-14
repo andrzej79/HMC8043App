@@ -1,0 +1,7 @@
+#ifndef HMCAPPGLOBAL_H
+#define HMCAPPGLOBAL_H
+
+#define SKEY_HOSTADDR "HostAddress"
+#define DEFAULT_HOST  "192.168.12.100"
+
+#endif // HMCAPPGLOBAL_H

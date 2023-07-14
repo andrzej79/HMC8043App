@@ -1,3 +1,4 @@
+#include <QTimer>
 #include "valuesetdialog.h"
 #include "ui_valuesetdialog.h"
 
@@ -16,6 +17,10 @@ ValueSetDialog::ValueSetDialog(QWidget *parent) :
   connect(ui->cbPresets, qOverload<int>(&QComboBox::currentIndexChanged), this, &ValueSetDialog::cbPresetsIndexChanged);
 #endif
   connect(ui->edValue, &QLineEdit::editingFinished, this, &ValueSetDialog::editingFinished);
+
+  QTimer::singleShot(100, this, [this]() {
+     ui->edValue->selectAll();
+  });
 }
 
 /**
@@ -57,6 +62,18 @@ void ValueSetDialog::setValue(double value)
 }
 
 /**
+ * @brief ValueSetDialog::setPresets
+ * @param presetList
+ */
+void ValueSetDialog::setPresets(const QList<double> &presetList, int prec)
+{
+  ui->cbPresets->clear();
+  for(auto &v : presetList) {
+    ui->cbPresets->addItem(QString::number(v, 'f', prec) + " " + _unitString, v);
+  }
+}
+
+/**
  * @brief ValueSetDialog::parseValue
  * @return
  */
@@ -85,7 +102,6 @@ void ValueSetDialog::editingFinished()
  */
 void ValueSetDialog::cbPresetsIndexChanged(int index)
 {
-  ui->edValue->setText(ui->cbPresets->currentText());
-  parseValue();
+  _value = ui->cbPresets->itemData(index).toDouble();
   accept();
 }

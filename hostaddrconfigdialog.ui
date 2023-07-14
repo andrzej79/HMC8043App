@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ValueSetDialog</class>
- <widget class="QDialog" name="ValueSetDialog">
+ <class>HostAddrConfigDialog</class>
+ <widget class="QDialog" name="HostAddrConfigDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>398</width>
-    <height>191</height>
+    <width>363</width>
+    <height>128</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,30 +28,9 @@
     </spacer>
    </item>
    <item>
-    <widget class="QLabel" name="lbEnterValue">
-     <property name="text">
-      <string>Enter value</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLineEdit" name="edValue"/>
-     </item>
-     <item>
-      <widget class="QLabel" name="lbValueUnits">
-       <property name="text">
-        <string>V</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>or</string>
+      <string>Enter HMC8043 Device Address:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -59,17 +38,27 @@
     </widget>
    </item>
    <item>
-    <widget class="QComboBox" name="cbPresets">
-     <property name="currentIndex">
-      <number>-1</number>
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="inputMask">
+      <string/>
      </property>
-     <property name="placeholderText">
-      <string>select preset</string>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer_3">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
@@ -81,19 +70,6 @@
      </property>
     </spacer>
    </item>
-   <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-     <property name="centerButtons">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <resources/>
@@ -101,12 +77,12 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>ValueSetDialog</receiver>
+   <receiver>HostAddrConfigDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>260</x>
-     <y>169</y>
+     <x>248</x>
+     <y>254</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -117,12 +93,12 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>ValueSetDialog</receiver>
+   <receiver>HostAddrConfigDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>328</x>
-     <y>169</y>
+     <x>316</x>
+     <y>260</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>

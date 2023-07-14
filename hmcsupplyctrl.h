@@ -72,6 +72,7 @@ private slots:
 
 signals:
   void deviceConnected();
+  void deviceConnectionFailed();
   void deviceConnectionError();
   void deviceDisconnected();
   void channelVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, double voltage);

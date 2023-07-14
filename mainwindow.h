@@ -31,8 +31,10 @@ private slots:
   void btnConnectClicked();
   void btnDisconnectClicked();
   void btnMasterOutEnableClicked();
+  void actSetHostAddress();
 
   void deviceConnected();
+  void deviceConnectionFailed();
   void deviceDisconnected();
   void masterOutEnableChanged(bool enabled);
 

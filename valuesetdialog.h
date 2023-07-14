@@ -17,11 +17,13 @@ public:
   void setUnitString(const QString &name);
   double getValue() const;
   void setValue(double value);
+  void setPresets(const QList<double> &presetList, int prec = 1);
 
 private:
   Ui::ValueSetDialog *ui;
   double _value;
   QString _unitString;
+  QList<double> _presets;
 
   bool parseValue();
 

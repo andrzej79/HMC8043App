@@ -5,6 +5,10 @@
 #include "valuesetdialog.h"
 #include "ui_hmcchannelwidget.h"
 
+const QList<double> HMCChannelWidget::_voltagePresets{1.0, 3.3, 5.0, 9.0, 12.0, 15.0, 24.0, 30.0};
+const QList<double> HMCChannelWidget::_currentPresets{0.1, 0.25, 0.5, 1.0, 2.0, 3.0};
+
+
 /**
  * @brief HMCChannelWidget::HMCChannelWidget
  * @param parent
@@ -76,6 +80,7 @@ void HMCChannelWidget::btnSetVoltageClicked()
   ValueSetDialog *dlg = new ValueSetDialog(this);
   dlg->setUnitString("V");
   dlg->setWindowTitle("Set Voltage Value");
+  dlg->setPresets(_voltagePresets, 3);
   dlg->setValue(_hmcCtrl->getChannelTargetVoltage(_channel));
   auto dlgRes = dlg->exec();
   if(dlgRes == QDialog::Accepted) {
@@ -93,6 +98,7 @@ void HMCChannelWidget::btnSetCurrentClicked()
   ValueSetDialog *dlg = new ValueSetDialog(this);
   dlg->setUnitString("A");
   dlg->setWindowTitle("Set Current Value");
+  dlg->setPresets(_currentPresets, 3);
   dlg->setValue(_hmcCtrl->getChannelTargetCurrent(_channel));
   auto dlgRes = dlg->exec();
   if(dlgRes == QDialog::Accepted) {
