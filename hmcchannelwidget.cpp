@@ -45,8 +45,10 @@ void HMCChannelWidget::setupWidget(HMCSupplyCtrl *hmcCtrl, HMCSupplyCtrl::HMCCha
 
   createConnections();
 
-  ui->lcdCurrent->setStyleSheet("QLCDNumber{color: red;}");
-  ui->lcdVoltage->setStyleSheet("QLCDNumber{color: rgb(0,128,0)}");
+  ui->lcdCurrent->setStyleSheet("QLCDNumber{color: red; background-color: rgb(40,40,40);}");
+  ui->lcdVoltage->setStyleSheet("QLCDNumber{color: rgb(0,128,0); background-color: rgb(40,40,40);}");
+  ui->lcdPower->setStyleSheet("QLCDNumber{color: rgb(255,128,0); background-color: rgb(40,40,40);}");
+
   deviceDisconnected();
 }
 
@@ -123,6 +125,7 @@ void HMCChannelWidget::deviceDisconnected()
 {
   ui->lcdVoltage->display("-.---");
   ui->lcdCurrent->display("-.---");
+  ui->lcdPower->display("-.-");
   ui->lbTargetCurrent->setText("-.---");
   ui->lbTargetVoltage->setText("-.---");
   ui->cbOutEnable->setChecked(false);
@@ -138,7 +141,9 @@ void HMCChannelWidget::channelVoltageChanged(HMCSupplyCtrl::HMCChannel chNr, dou
   if(chNr != _channel) {
     return;
   }
+  _voltage = voltage;
   ui->lcdVoltage->display(QString::asprintf("%.2f", voltage));
+  ui->lcdPower->display(QString::number(_voltage * _current, 'f', 1));
 }
 
 /**
@@ -151,7 +156,9 @@ void HMCChannelWidget::channelCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, dou
   if(chNr != _channel) {
     return;
   }
+  _current = current;
   ui->lcdCurrent->display(QString::asprintf("%.3f", current));
+  ui->lcdPower->display(QString::number(_voltage * _current, 'f', 1));
 }
 
 /**

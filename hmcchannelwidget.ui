@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>305</width>
-    <height>314</height>
+    <width>328</width>
+    <height>440</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,9 +19,9 @@
      <property name="title">
       <string>Channel Title</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="2,2,0,0,0,0">
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="2,2,1,0,0,0,0">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="5,10,0">
+       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="5,10,1">
         <item>
          <widget class="QLabel" name="lbVoltage">
           <property name="text">
@@ -55,7 +55,7 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="5,10,0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="5,10,1">
         <item>
          <widget class="QLabel" name="lbCurrent">
           <property name="text">
@@ -83,6 +83,40 @@
          <widget class="QLabel" name="label_2">
           <property name="text">
            <string>A</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="5,10,1">
+        <item>
+         <widget class="QLabel" name="lbPower">
+          <property name="text">
+           <string>Power</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLCDNumber" name="lcdPower">
+          <property name="frameShape">
+           <enum>QFrame::Panel</enum>
+          </property>
+          <property name="smallDecimalPoint">
+           <bool>true</bool>
+          </property>
+          <property name="digitCount">
+           <number>6</number>
+          </property>
+          <property name="segmentStyle">
+           <enum>QLCDNumber::Flat</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>W</string>
           </property>
          </widget>
         </item>

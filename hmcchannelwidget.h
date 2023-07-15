@@ -24,6 +24,8 @@ private:
   QString _channelName;
   static const QList<double> _voltagePresets;
   static const QList<double> _currentPresets;
+  double _voltage;
+  double _current;
 
   void createConnections();
 

@@ -93,36 +93,130 @@ void HMCSupplyCtrl::createSocketConnections()
 /**
  * @brief HMCSupplyCtrl::sendCmdLine
  * @param cmd
- * @return device response string
+ * @param status
+ * @return reply string or empty
  */
-QString HMCSupplyCtrl::sendCmdLine(QString cmd)
+QString HMCSupplyCtrl::sendCmdLine(QString cmd, bool *status)
 {
+  bool waitForResponse;
+  bool wrResult, rdResult;
+  bool statTmp = false;
   QString response;
 
   if(_tcpSock == nullptr || _tcpSock->isWritable() == false) {
     qCritical() << Q_FUNC_INFO << "TCP socket is not ready wor write!";
-    return response;
+    goto exitLabel;
   }
-  bool waitForResponse = cmd.endsWith("?");
+  waitForResponse = cmd.endsWith("?");
   cmd.append('\n');
   _tcpSock->write(cmd.toLocal8Bit());
-  _tcpSock->waitForBytesWritten(SOCK_TIMEOUT_MS);
+  wrResult = _tcpSock->waitForBytesWritten(SOCK_TIMEOUT_MS);
+  if(!wrResult) {
+    goto exitLabel;
+  }
   if(waitForResponse) {
-    _tcpSock->waitForReadyRead(SOCK_TIMEOUT_MS);
+    rdResult = _tcpSock->waitForReadyRead(SOCK_TIMEOUT_MS);
+    if(!rdResult) {
+      goto exitLabel;
+    }
     response = QString::fromLocal8Bit(_tcpSock->readAll());
+  }
+  statTmp = true;
+exitLabel:
+  if(status) {
+    *status = statTmp;
   }
   return response;
 }
 
 /**
+ * @brief HMCSupplyCtrl::sendCmdAndParseReply
+ * @param cmd
+ * @param val
+ * @return true if successfull
+ */
+bool HMCSupplyCtrl::sendCmdAndParseReply(QString cmd, double *val)
+{
+  Q_ASSERT(val != nullptr);
+  bool parseOk = false;
+  QString replyStr;
+  double tmp;
+
+  replyStr = sendCmdLine(cmd);
+  tmp = replyStr.toDouble(&parseOk);
+  if(parseOk) {
+    *val = tmp;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief HMCSupplyCtrl::sendChannelCmdAndParseReply
+ * @param chNr
+ * @param cmd
+ * @param val
+ * @return true if successfull
+ */
+bool HMCSupplyCtrl::sendChannelCmdAndParseReply(HMCChannel chNr, QString cmd, double *val)
+{
+  if(!channelSelect(chNr)) {
+    return false;
+  }
+  return sendCmdAndParseReply(cmd, val);
+}
+
+/**
+ * @brief HMCSupplyCtrl::sendCmdAndParseReply
+ * @param cmd
+ * @param val
+ * @return true if successfull
+ */
+bool HMCSupplyCtrl::sendCmdAndParseReply(QString cmd, int *val)
+{
+  Q_ASSERT(val != nullptr);
+  bool parseOk = false;
+  QString replyStr;
+  int tmp;
+
+  replyStr = sendCmdLine(cmd);
+  tmp = replyStr.toInt(&parseOk);
+  if(parseOk) {
+    *val = tmp;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief HMCSupplyCtrl::sendChannelCmdAndParseReply
+ * @param chNr
+ * @param cmd
+ * @param val
+ * @return true if successfull
+ */
+bool HMCSupplyCtrl::sendChannelCmdAndParseReply(HMCChannel chNr, QString cmd, int *val)
+{
+  if(!channelSelect(chNr)) {
+    return false;
+  }
+  return sendCmdAndParseReply(cmd, val);
+}
+
+/**
  * @brief HMCSupplyCtrl::channelSelect
  * @param chNr
+ * @return true if operation successfull
  */
-void HMCSupplyCtrl::channelSelect(HMCChannel chNr)
+bool HMCSupplyCtrl::channelSelect(HMCChannel chNr)
 {
   if(_selChannel != chNr) {
-    sendCmdLine(QString("INST OUT%1").arg(chNr));
+    bool status = false;
+    sendCmdLine(QString("INST OUT%1").arg(chNr), &status);
     _selChannel = chNr;
+    return status;
+  } else {
+    return true;
   }
 }
 
@@ -178,14 +272,11 @@ void HMCSupplyCtrl::deviceDisconnect()
  */
 void HMCSupplyCtrl::updateChannelVoltage(HMCChannel chNr)
 {
-  bool parseOk = false;
-  QString strCurr;
-  double volt;
-
-  channelSelect(chNr);
-  strCurr = sendCmdLine("MEAS:VOLT?");
-  volt = strCurr.toDouble(&parseOk);
-  emit channelVoltageChanged(chNr, volt);
+  double val;
+  auto cmdRes = sendChannelCmdAndParseReply(chNr, "MEAS:VOLT?", &val);
+  if(cmdRes) {
+    emit channelVoltageChanged(chNr, val);
+  }
 }
 
 /**
@@ -194,14 +285,11 @@ void HMCSupplyCtrl::updateChannelVoltage(HMCChannel chNr)
  */
 void HMCSupplyCtrl::updateChannelCurrent(HMCChannel chNr)
 {
-  bool parseOk = false;
-  QString strCurr;
-  double curr;
-
-  channelSelect(chNr);
-  strCurr = sendCmdLine("MEAS:CURR?");
-  curr = strCurr.toDouble(&parseOk);
-  emit channelCurrentChanged(chNr, curr);
+  double val;
+  auto cmdRes = sendChannelCmdAndParseReply(chNr, "MEAS:CURR?", &val);
+  if(cmdRes) {
+    emit channelCurrentChanged(chNr, val);
+  }
 }
 
 /**
@@ -210,14 +298,12 @@ void HMCSupplyCtrl::updateChannelCurrent(HMCChannel chNr)
  */
 void HMCSupplyCtrl::updateChannelTargetVoltage(HMCChannel chNr)
 {
-  bool parseOk = false;
-  QString strVal;
   double val;
-  channelSelect(chNr);
-  strVal = sendCmdLine("VOLT?");
-  val = strVal.toDouble(&parseOk);
-  _channelTargetVoltage[CH_TO_ARRAY_INDEX(chNr)] = val;
-  emit channelTargetVoltageChanged(chNr, val);
+  auto cmdRes = sendChannelCmdAndParseReply(chNr, "VOLT?", &val);
+  if(cmdRes) {
+    _channelTargetVoltage[CH_TO_ARRAY_INDEX(chNr)] = val;
+    emit channelTargetVoltageChanged(chNr, val);
+  }
 }
 
 /**
@@ -226,14 +312,12 @@ void HMCSupplyCtrl::updateChannelTargetVoltage(HMCChannel chNr)
  */
 void HMCSupplyCtrl::updateChannelTargetCurrent(HMCChannel chNr)
 {
-  bool parseOk = false;
-  QString strVal;
   double val;
-  channelSelect(chNr);
-  strVal = sendCmdLine("CURR?");
-  val = strVal.toDouble(&parseOk);
-  _channelTargetCurrent[CH_TO_ARRAY_INDEX(chNr)] = val;
-  emit channelTargetCurrentChanged(chNr, val);
+  auto cmdRes = sendChannelCmdAndParseReply(chNr, "CURR?", &val);
+  if(cmdRes) {
+    _channelTargetCurrent[CH_TO_ARRAY_INDEX(chNr)] = val;
+    emit channelTargetCurrentChanged(chNr, val);
+  }
 }
 
 /**
@@ -242,14 +326,12 @@ void HMCSupplyCtrl::updateChannelTargetCurrent(HMCChannel chNr)
  */
 void HMCSupplyCtrl::updateChannelOutEnable(HMCChannel chNr)
 {
-  bool parseOk = false;
-  QString strVal;
-  double val;
-  channelSelect(chNr);
-  strVal = sendCmdLine("OUTP:CHAN?");
-  val = strVal.toDouble(&parseOk);
-  _channelEnabled[CH_TO_ARRAY_INDEX(chNr)] = val;
-  emit channelOutEnableChanged(chNr, val);
+  int val;
+  auto cmdRes = sendChannelCmdAndParseReply(chNr, "OUTP:CHAN?", &val);
+  if(cmdRes) {
+    _channelEnabled[CH_TO_ARRAY_INDEX(chNr)] = val;
+    emit channelOutEnableChanged(chNr, val);
+  }
 }
 
 /**
@@ -257,13 +339,12 @@ void HMCSupplyCtrl::updateChannelOutEnable(HMCChannel chNr)
  */
 void HMCSupplyCtrl::updateMasterOutEnable()
 {
-  bool parseOk = false;
-  QString strVal;
-  double val;
-  strVal = sendCmdLine("OUTP:MAST?");
-  val = strVal.toDouble(&parseOk);
-  _masterOutEnabled = val;
-  emit masterOutEnableChanged(_masterOutEnabled);
+  int val;
+  auto cmdRes = sendCmdAndParseReply("OUTP:MAST?", &val);
+  if(cmdRes) {
+    _masterOutEnabled = val;
+    emit masterOutEnableChanged(_masterOutEnabled);
+  }
 }
 
 /**
@@ -335,6 +416,9 @@ void HMCSupplyCtrl::threadStarted()
   qDebug() << Q_FUNC_INFO << "thread started";
 }
 
+/**
+ * @brief HMCSupplyCtrl::socketConnected
+ */
 void HMCSupplyCtrl::socketConnected()
 {
   _tcpSock->waitForReadyRead(1000);

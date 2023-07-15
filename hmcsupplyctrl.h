@@ -44,8 +44,12 @@ private:
   void initObjects();
   void createConnections();
   void createSocketConnections();
-  QString sendCmdLine(QString cmd);
-  void channelSelect(HMCChannel chNr);
+  QString sendCmdLine(QString cmd, bool *status = nullptr);
+  bool sendCmdAndParseReply(QString cmd, double *val);
+  bool sendChannelCmdAndParseReply(HMCChannel chNr, QString cmd, double *val);
+  bool sendCmdAndParseReply(QString cmd, int *val);
+  bool sendChannelCmdAndParseReply(HMCChannel chNr, QString cmd, int *val);
+  bool channelSelect(HMCChannel chNr);
 
 public slots:
   void cleanup();

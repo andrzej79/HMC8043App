@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>HMC8043 IP Configuration</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -30,7 +30,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Enter HMC8043 Device Address:</string>
+      <string>Enter HMC8043 Device IP Address:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
