@@ -157,7 +157,14 @@ void HMCChannelWidget::channelCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, dou
     return;
   }
   _current = current;
-  ui->lcdCurrent->display(QString::asprintf("%.3f", current));
+
+  if(_current >= 1.0) {
+    ui->lcdCurrent->display(QString::asprintf("%.3f", current));
+    ui->lbCurrUnit->setText("A");
+  } else {
+    ui->lcdCurrent->display(QString::asprintf("%.1f", current * 1e3));
+    ui->lbCurrUnit->setText("mA");
+  }
   ui->lcdPower->display(QString::number(_voltage * _current, 'f', 1));
 }
 
