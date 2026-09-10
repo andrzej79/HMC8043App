@@ -18,7 +18,7 @@ void HostAddrConfigDialog::setCurrentAddr(const QString &addr)
   ui->lineEdit->setText(addr);
 }
 
-QString HostAddrConfigDialog::getAddr()
+QString HostAddrConfigDialog::addr() const
 {
   return ui->lineEdit->text();
 }

@@ -15,7 +15,7 @@ public:
   explicit HostAddrConfigDialog(QWidget *parent = nullptr);
   ~HostAddrConfigDialog();
   void setCurrentAddr(const QString &addr);
-  QString getAddr();
+  QString addr() const;
 
 private:
   Ui::HostAddrConfigDialog *ui;

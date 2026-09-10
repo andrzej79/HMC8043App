@@ -1,4 +1,3 @@
-#include <QMetaEnum>
 #include <QDialog>
 #include <algorithm>
 #include "hmcchannelwidget.h"
@@ -62,11 +61,16 @@ void HMCChannelWidget::createConnections()
   connect(ui->cbOutEnable, &QCheckBox::clicked, this, &HMCChannelWidget::cbChannelOutEnableClicked);
 
   connect(_hmcCtrl, &HMCSupplyCtrl::deviceDisconnected, this, &HMCChannelWidget::deviceDisconnected);
+  /* Blank the readouts as soon as the link fails. Waiting for deviceDisconnected()
+   * would leave stale numbers on screen until the worker has finished its in-flight
+   * blocking socket waits - seconds after the user has been told the link is gone. */
+  connect(_hmcCtrl, &HMCSupplyCtrl::deviceConnectionError, this, &HMCChannelWidget::deviceDisconnected);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelCurrentChanged, this, &HMCChannelWidget::channelCurrentChanged);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelVoltageChanged, this, &HMCChannelWidget::channelVoltageChanged);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelTargetCurrentChanged, this, &HMCChannelWidget::channelTargetCurrentChanged);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelTargetVoltageChanged, this, &HMCChannelWidget::channelTargetVoltageChanged);
   connect(_hmcCtrl, &HMCSupplyCtrl::channelOutEnableChanged, this, &HMCChannelWidget::channelOutEnableChanged);
+  connect(_hmcCtrl, &HMCSupplyCtrl::channelLimitsChanged, this, &HMCChannelWidget::channelLimitsChanged);
 
   connect(this, &HMCChannelWidget::setChannelVoltage, _hmcCtrl, &HMCSupplyCtrl::setChannelVoltage);
   connect(this, &HMCChannelWidget::setChannelCurrent, _hmcCtrl, &HMCSupplyCtrl::setChannelCurrent);
@@ -83,10 +87,11 @@ void HMCChannelWidget::btnSetVoltageClicked()
   dlg->setUnitString("V");
   dlg->setWindowTitle("Set Voltage Value");
   dlg->setPresets(_voltagePresets, 3);
-  dlg->setValue(_hmcCtrl->getChannelTargetVoltage(_channel));
+  dlg->setRange(0.0, _maxVoltage);
+  dlg->setValue(_targetVoltage);
   auto dlgRes = dlg->exec();
   if(dlgRes == QDialog::Accepted) {
-    auto v = std::clamp(dlg->getValue(), 0.0, 99.0);
+    auto v = std::clamp(dlg->value(), 0.0, _maxVoltage);
     emit setChannelVoltage(_channel, v);
   }
   dlg->deleteLater();
@@ -101,10 +106,11 @@ void HMCChannelWidget::btnSetCurrentClicked()
   dlg->setUnitString("A");
   dlg->setWindowTitle("Set Current Value");
   dlg->setPresets(_currentPresets, 3);
-  dlg->setValue(_hmcCtrl->getChannelTargetCurrent(_channel));
+  dlg->setRange(0.0, _maxCurrent);
+  dlg->setValue(_targetCurrent);
   auto dlgRes = dlg->exec();
   if(dlgRes == QDialog::Accepted) {
-    auto v = std::clamp(dlg->getValue(), 0.0, 5.0);
+    auto v = std::clamp(dlg->value(), 0.0, _maxCurrent);
     emit setChannelCurrent(_channel, v);
   }
   dlg->deleteLater();
@@ -123,6 +129,10 @@ void HMCChannelWidget::cbChannelOutEnableClicked()
  */
 void HMCChannelWidget::deviceDisconnected()
 {
+  _voltage = 0.0;
+  _current = 0.0;
+  _targetVoltage = 0.0;
+  _targetCurrent = 0.0;
   ui->lcdVoltage->display("-.---");
   ui->lcdCurrent->display("-.---");
   ui->lcdPower->display("-.-");
@@ -169,6 +179,21 @@ void HMCChannelWidget::channelCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, dou
 }
 
 /**
+ * @brief HMCChannelWidget::channelLimitsChanged
+ * @param chNr
+ * @param maxVoltage
+ * @param maxCurrent
+ */
+void HMCChannelWidget::channelLimitsChanged(HMCSupplyCtrl::HMCChannel chNr, double maxVoltage, double maxCurrent)
+{
+  if(chNr != _channel) {
+    return;
+  }
+  _maxVoltage = maxVoltage;
+  _maxCurrent = maxCurrent;
+}
+
+/**
  * @brief HMCChannelWidget::channelOutEnableChanged
  * @param chNr
  * @param enabled
@@ -192,6 +217,7 @@ void HMCChannelWidget::channelTargetVoltageChanged(HMCSupplyCtrl::HMCChannel chN
   if(chNr != _channel) {
     return;
   }
+  _targetVoltage = voltage;
   ui->lbTargetVoltage->setText(QString::asprintf("%.3f V", voltage));
 }
 
@@ -205,6 +231,7 @@ void HMCChannelWidget::channelTargetCurrentChanged(HMCSupplyCtrl::HMCChannel chN
   if(chNr != _channel) {
     return;
   }
+  _targetCurrent = current;
   ui->lbTargetCurrent->setText(QString::asprintf("%.3f A", current));
 }
 

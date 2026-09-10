@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTimer>
 #include "hmcsupplyctrl.h"
 
 QT_BEGIN_NAMESPACE
@@ -18,11 +17,16 @@ public:
   ~MainWindow();
 
 protected:
-  void closeEvent(QCloseEvent *evt);
+  void closeEvent(QCloseEvent *evt) override;
 
 private:
-  Ui::MainWindow *ui;
+  /* Declared before ui so the controller outlives the channel widgets that hold
+   * a pointer to it (members are destroyed in reverse declaration order, and the
+   * child widgets are only deleted later, by ~QObject). */
   HMCSupplyCtrl _hmcCtrl;
+  Ui::MainWindow *ui;
+  bool _shutdownRequested = false;
+  bool _connErrorReported = false;
 
   void createConnections();
   void registerMetaTypes();
@@ -35,6 +39,7 @@ private slots:
 
   void deviceConnected();
   void deviceConnectionFailed();
+  void deviceConnectionError();
   void deviceDisconnected();
   void masterOutEnableChanged(bool enabled);
 

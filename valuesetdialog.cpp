@@ -1,3 +1,5 @@
+#include <QDoubleValidator>
+#include <QMessageBox>
 #include <QTimer>
 #include "valuesetdialog.h"
 #include "ui_valuesetdialog.h"
@@ -42,10 +44,10 @@ void ValueSetDialog::setUnitString(const QString &name)
 }
 
 /**
- * @brief ValueSetDialog::getValue
+ * @brief ValueSetDialog::value
  * @return
  */
-double ValueSetDialog::getValue() const
+double ValueSetDialog::value() const
 {
   return _value;
 }
@@ -68,9 +70,30 @@ void ValueSetDialog::setValue(double value)
 void ValueSetDialog::setPresets(const QList<double> &presetList, int prec)
 {
   ui->cbPresets->clear();
-  for(auto &v : presetList) {
+  for(const auto &v : presetList) {
     ui->cbPresets->addItem(QString::number(v, 'f', prec) + " " + _unitString, v);
   }
+}
+
+/**
+ * @brief ValueSetDialog::setRange
+ * @param min
+ * @param max
+ *
+ * Bounds come from the instrument (VOLT? MAX / CURR? MAX), so the dialog can refuse
+ * an out-of-range entry up front instead of sending a command the supply rejects
+ * into an error queue the application never reads.
+ */
+void ValueSetDialog::setRange(double min, double max)
+{
+  _min = min;
+  _max = max;
+  auto *validator = new QDoubleValidator(min, max, 3, this);
+  validator->setNotation(QDoubleValidator::StandardNotation);
+  validator->setLocale(QLocale::c());   /* parseValue() uses toDouble(), which is C-locale */
+  ui->edValue->setValidator(validator);
+  ui->lbValueUnits->setToolTip(QString("%1 ... %2 %3")
+                                .arg(min, 0, 'f', 3).arg(max, 0, 'f', 3).arg(_unitString));
 }
 
 /**
@@ -89,6 +112,35 @@ bool ValueSetDialog::parseValue()
 }
 
 /**
+ * @brief ValueSetDialog::accept
+ *
+ * The OK button is wired straight to accept() in the .ui file, and parseValue()
+ * only ran as a side effect of editingFinished(). Unparseable input therefore
+ * left _value at whatever setValue() had seeded - the channel's current setpoint -
+ * and the dialog accepted anyway, re-sending the old value as if it were new.
+ * Validate here so the dialog cannot return a value the user did not enter.
+ */
+void ValueSetDialog::accept()
+{
+  if(!parseValue()) {
+    QMessageBox::warning(this, "Invalid value",
+                         "Please enter a valid number, using '.' as the decimal separator.");
+    ui->edValue->selectAll();
+    ui->edValue->setFocus();
+    return;
+  }
+  if(_max > _min && (_value < _min || _value > _max)) {
+    QMessageBox::warning(this, "Out of range",
+                         QString("The instrument accepts %1 ... %2 %3.")
+                           .arg(_min, 0, 'f', 3).arg(_max, 0, 'f', 3).arg(_unitString));
+    ui->edValue->selectAll();
+    ui->edValue->setFocus();
+    return;
+  }
+  QDialog::accept();
+}
+
+/**
  * @brief ValueSetDialog::editingFinished
  */
 void ValueSetDialog::editingFinished()
@@ -103,5 +155,7 @@ void ValueSetDialog::editingFinished()
 void ValueSetDialog::cbPresetsIndexChanged(int index)
 {
   _value = ui->cbPresets->itemData(index).toDouble();
-  accept();
+  QSignalBlocker block(ui->edValue);
+  ui->edValue->setText(QString::number(_value, 'f', 3));
+  QDialog::accept();
 }

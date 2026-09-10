@@ -45,8 +45,14 @@ MainWindow::~MainWindow()
  */
 void MainWindow::closeEvent(QCloseEvent *evt)
 {
-  btnDisconnectClicked();
-  emit cleanupRequst();
+  /* cleanup() moves the controller onto this thread, so a second pass would make
+   * sender and receiver share a thread - and Qt treats a same-thread
+   * BlockingQueuedConnection as a deadlock. Run the handshake exactly once. */
+  if(!_shutdownRequested) {
+    _shutdownRequested = true;
+    btnDisconnectClicked();
+    emit cleanupRequst();
+  }
   evt->accept();
 }
 
@@ -62,6 +68,7 @@ void MainWindow::createConnections()
 
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceConnected, this, &MainWindow::deviceConnected);
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceConnectionFailed, this, &MainWindow::deviceConnectionFailed);
+  connect(&_hmcCtrl, &HMCSupplyCtrl::deviceConnectionError, this, &MainWindow::deviceConnectionError);
   connect(&_hmcCtrl, &HMCSupplyCtrl::deviceDisconnected, this, &MainWindow::deviceDisconnected);
   connect(&_hmcCtrl, &HMCSupplyCtrl::masterOutEnableChanged, this, &MainWindow::masterOutEnableChanged);
 
@@ -87,6 +94,7 @@ void MainWindow::registerMetaTypes()
 void MainWindow::btnConnectClicked()
 {
   ui->btnConnect->setEnabled(false);
+  _connErrorReported = false;
   QSettings s;
   QHostAddress addr;
 
@@ -100,6 +108,10 @@ void MainWindow::btnConnectClicked()
  */
 void MainWindow::btnDisconnectClicked()
 {
+  /* Unwind any in-flight blocking socket wait first, otherwise the queued slots
+   * below sit behind it for up to a full socket timeout. Safe to call directly:
+   * it only stores into an atomic. */
+  _hmcCtrl.abortPendingIo();
   emit setPeriodicUpdateEnable(false);
   emit deviceDisconnect();
 }
@@ -124,7 +136,7 @@ void MainWindow::actSetHostAddress()
 
   auto res = dlg->exec();
   if(res == QDialog::Accepted) {
-    QHostAddress addr(dlg->getAddr());
+    QHostAddress addr(dlg->addr());
     qDebug() << Q_FUNC_INFO << "configuring Host Address:" << addr << addr.isNull() << addr.isUniqueLocalUnicast();
     if(addr.isNull() == false) {
       qDebug() << Q_FUNC_INFO << "new configured Host Address:" << addr;
@@ -156,6 +168,20 @@ void MainWindow::deviceConnectionFailed()
 {
   QMessageBox::critical(this, "Error!", "Device Connection Failed!");
   ui->btnConnect->setEnabled(true);
+}
+
+/**
+ * @brief MainWindow::deviceConnectionError
+ */
+void MainWindow::deviceConnectionError()
+{
+  emit deviceDisconnect();
+  deviceDisconnected();
+  if(_shutdownRequested || _connErrorReported) {
+    return;
+  }
+  _connErrorReported = true;
+  QMessageBox::critical(this, "Error!", "Connection to the device was lost!");
 }
 
 /**

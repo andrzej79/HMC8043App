@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QTimer>
 #include <array>
+#include <atomic>
 
 #define HMC_SCPI_PORT 5025
 
@@ -14,7 +15,7 @@ class HMCSupplyCtrl : public QObject
 {
   Q_OBJECT
 public:
-  enum HMCChannel {
+  enum HMCChannel : int {
     NoChannel = 0,
     Channel1  = 1,
     Channel2,
@@ -24,27 +25,43 @@ public:
   #define HMCChannelCount 3
   static const std::array<HMCChannel, HMCChannelCount> hmcChannels;
 
+  static bool isValidChannel(HMCChannel chNr);
+
   explicit HMCSupplyCtrl(QObject *parent = nullptr);
   ~HMCSupplyCtrl();
-  double getChannelTargetVoltage(HMCChannel chNr) const;
-  double getChannelTargetCurrent(HMCChannel chNr) const;
-  bool isChannelEnabled(HMCChannel chNr);
+
+  /* The ONLY member safe to call from another thread: it just stores into an
+   * atomic. Setting it makes the in-flight blocking socket waits unwind within
+   * ABORT_POLL_SLICE_MS instead of running out their full timeout, which is what
+   * keeps disconnect and shutdown from stalling the GUI. */
+  void abortPendingIo();
 
 private:
   QTcpSocket *_tcpSock = nullptr;
   QThread _thread;
   QTimer *_periodicUpdateTmr = nullptr;
   bool _periodicUpdateEnable = false;
+  bool _connectInProgress = false;
+  bool _handshakeOk = false;
+  bool _linkLostReported = false;
   HMCChannel _selChannel = NoChannel;
-  std::array<bool, HMCChannelCount> _channelEnabled;
-  std::array<double, HMCChannelCount> _channelTargetVoltage;
-  std::array<double, HMCChannelCount> _channelTargetCurrent;
+  std::array<bool, HMCChannelCount> _channelEnabled{};
+  std::array<double, HMCChannelCount> _channelTargetVoltage{};
+  std::array<double, HMCChannelCount> _channelTargetCurrent{};
   bool _masterOutEnabled = false;
+  std::array<double, HMCChannelCount> _channelMaxVoltage{};
+  std::array<double, HMCChannelCount> _channelMaxCurrent{};
+  std::atomic<bool> _abortRequested = false;
 
   void initObjects();
   void createConnections();
   void createSocketConnections();
   QString sendCmdLine(QString cmd, bool *status = nullptr);
+  QString readReplyLine(bool *status);
+  bool waitForWriteInterruptible(QDeadlineTimer &deadline);
+  bool waitForReadInterruptible(QDeadlineTimer &deadline);
+  bool updateChannelLimits(HMCChannel chNr);
+  void reportLinkLost(const char *why);
   bool sendCmdAndParseReply(QString cmd, double *val);
   bool sendChannelCmdAndParseReply(HMCChannel chNr, QString cmd, double *val);
   bool sendCmdAndParseReply(QString cmd, int *val);
@@ -85,6 +102,7 @@ signals:
   void channelTargetCurrentChanged(HMCSupplyCtrl::HMCChannel chNr, double current);
   void channelOutEnableChanged(HMCSupplyCtrl::HMCChannel chNr, bool enabled);
   void masterOutEnableChanged(bool enabled);
+  void channelLimitsChanged(HMCSupplyCtrl::HMCChannel chNr, double maxVoltage, double maxCurrent);
 
 
 };
