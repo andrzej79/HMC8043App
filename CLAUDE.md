@@ -62,9 +62,10 @@ Four-layer split, small enough to hold in your head, but the threading boundary 
     (100 ms) slices and bail out when the flag is set. `MainWindow::btnDisconnectClicked` calls it
     before emitting anything; `deviceConnect()` clears it. Don't add a second directly-callable
     member — anything that isn't a lone atomic store belongs behind a queued slot.
-  - `sendCmdLine()` decides whether to read a reply purely from `cmd.endsWith("?")`. A query
-    without the `?` writes and returns an empty string; the reply then desynchronizes the stream
-    for the *next* command. Every new query string must keep the `?` suffix. Replies are framed
+  - `sendCmdLine()` decides whether to read a reply from the command **header** — its first
+    token — ending in `?`, so `VOLT? MAX` is a query. A query that isn't recognised as one is sent
+    as a write and returns an empty string, and its reply then desynchronizes the stream for the
+    *next* command. Every new query needs a `?`-terminated header. Replies are framed
     by `readReplyLine()`, which reads until `'\n'` or the deadline — TCP gives no message
     boundaries and a truncated number still parses, so never go back to a bare `readAll()`.
     `sendCmdLine` also drops anything left in the read buffer before writing, so a reply that

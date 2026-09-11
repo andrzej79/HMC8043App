@@ -120,7 +120,10 @@ QString HMCSupplyCtrl::sendCmdLine(QString cmd, bool *status)
    * connect or was dropped by the peer still reports true. Gate on the actual
    * connection state instead. */
   if(_tcpSock != nullptr && _tcpSock->state() == QAbstractSocket::ConnectedState) {
-    const bool waitForResponse = cmd.endsWith("?");
+    /* A query is recognised by its header (first token), not by the end of the line:
+     * "VOLT? MAX" is a query too. Missing that treats it as a write, leaving its reply
+     * in the buffer to be read as the answer to whatever is sent next. */
+    const bool waitForResponse = cmd.trimmed().section(QLatin1Char(' '), 0, 0).endsWith(QLatin1Char('?'));
 
     /* Anything still buffered belongs to an earlier exchange - a reply that
      * arrived after its own timeout. Drop it, or it would be consumed as the
