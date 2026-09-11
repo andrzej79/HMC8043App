@@ -1,11 +1,12 @@
 #include <QDialog>
 #include <algorithm>
 #include "hmcchannelwidget.h"
+#include "hmcpresets.h"
 #include "valuesetdialog.h"
 #include "ui_hmcchannelwidget.h"
 
-const QList<double> HMCChannelWidget::_voltagePresets{1.0, 3.3, 5.0, 9.0, 12.0, 15.0, 24.0, 30.0};
-const QList<double> HMCChannelWidget::_currentPresets{0.1, 0.25, 0.5, 1.0, 2.0, 3.0};
+const QList<double> HMCChannelWidget::_voltagePresets = HMC_VOLTAGE_PRESETS;
+const QList<double> HMCChannelWidget::_currentPresets = HMC_CURRENT_PRESETS;
 
 
 /**

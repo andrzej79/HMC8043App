@@ -93,6 +93,7 @@ private slots:
 
 signals:
   void deviceConnected();
+  void deviceIdentified(const QString &idn);
   void deviceConnectionFailed();
   void deviceConnectionError();
   void deviceDisconnected();

@@ -1,4 +1,4 @@
-#include <QApplication>
+#include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QDebug>
 #include "hmcsupplyctrl.h"
@@ -361,7 +361,7 @@ bool HMCSupplyCtrl::channelSelect(HMCChannel chNr)
  */
 void HMCSupplyCtrl::cleanup()
 {
-  moveToThread(qApp->thread());
+  moveToThread(QCoreApplication::instance()->thread());
 }
 
 /**
@@ -715,6 +715,7 @@ void HMCSupplyCtrl::socketConnected()
     return;
   }
   qDebug() << Q_FUNC_INFO << "device:" << idn;
+  emit deviceIdentified(idn);
 
   for(auto ch : hmcChannels) {
     updateChannelLimits(ch);

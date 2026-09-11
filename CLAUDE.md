@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-HMC8043App is a Qt 6 (Widgets) desktop application for remotely controlling a Rohde & Schwarz
-HMC8043 triple-channel bench power supply over its SCPI/LXI network interface (raw TCP on port
-5025). It lets a user connect to a supply by IP address, view/set each channel's voltage and
+HMC8043App is a Qt application for remotely controlling a Rohde & Schwarz HMC8043
+triple-channel bench power supply over its SCPI/LXI network interface (raw TCP on port 5025).
+It has two front ends over one shared driver: a Qt Widgets desktop UI and a Qt Quick phone UI
+(one channel per page, swipe to switch). It lets a user connect to a supply by IP address, view/set each channel's voltage and
 current, toggle per-channel and master output enable, and see live measured values.
 
 ## Build and run
@@ -14,14 +15,25 @@ current, toggle per-channel and master output enable, and see live measured valu
 Standard Qt CMake project. Note the CMake project/target name is **`HMCSupplyApp`**, not
 `HMC8043App` (that is only the directory and `QApplication::applicationName`).
 
-All build output belongs under `./build/`. **Claude Code must always build into
-`./build/claude/`**, never into `./build/` directly, so agent builds never collide with the
-user's own Qt Creator builds:
+The UI is chosen at configure time with the cache option **`HMC_UI`** = `Widgets` (default,
+target `HMCSupplyApp`) or `Quick` (target `HMCSupplyMobile`); it shows up as a dropdown in Qt
+Creator / cmake-gui. One build directory holds one UI.
+
+All build output belongs under `./build/`. **Claude Code must always build under
+`./build/claude/`** — one subdirectory per UI — never into `./build/` directly, so agent builds
+never collide with the user's own Qt Creator builds:
 
 ```bash
-cmake -S . -B build/claude -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.5/macos"
-cmake --build build/claude
-open build/claude/HMCSupplyApp.app   # macOS (MACOSX_BUNDLE TRUE); ./build/claude/HMCSupplyApp elsewhere
+# desktop UI
+cmake -S . -B build/claude/widgets -DHMC_UI=Widgets -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.5/macos"
+cmake --build build/claude/widgets
+open build/claude/widgets/HMCSupplyApp.app
+
+# phone UI (Qt >= 6.8), run on the desktop in a phone-sized window
+cmake -S . -B build/claude/quick -DHMC_UI=Quick -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.5/macos"
+cmake --build build/claude/quick
+cmake --build build/claude/quick --target all_qmllint   # keep this at 0 warnings
+open build/claude/quick/quick/HMCSupplyMobile.app
 ```
 
 `CMAKE_PREFIX_PATH` is required — Qt is installed under `~/Qt/<version>/macos` and is not on the
@@ -33,9 +45,12 @@ default CMake search path on this machine.
 SDK/Qt-version mismatch, not a defect in this code, so don't chase it in the sources. Verified
 working: Qt 6.8.5.
 
-Requires Qt 6 (or Qt 5, still supported by `CMakeLists.txt` — see the `QT_VERSION` branches in
-`CMakeLists.txt` and `valuesetdialog.cpp`) with the `Widgets` and `Network` components. New
-source files must be added to `PROJECT_SOURCES` in `CMakeLists.txt` by hand.
+The Widgets UI still builds against Qt 5.15 as well as Qt 6 (see the `QT_VERSION` branches in
+`CMakeLists.txt` and `valuesetdialog.cpp`); the Quick UI requires Qt 6.8+. Source lists are
+maintained by hand: driver files in `HMC_CORE_SOURCES` (static library `hmc_core`, linked by both
+UIs), Widgets files in `PROJECT_SOURCES`, Quick files (C++ and `QML_FILES`) in
+`quick/CMakeLists.txt`. No Android SDK or Qt-for-mobile kit is installed on this machine (the
+only iOS kit is Qt 6.2.13), so phone packaging can't be built or tested here.
 
 `build/` is gitignored and already contains Qt Creator's own configured build dirs
 (`Desktop_Qt_6_2_13_clang_64bit-{Debug,Release}`); leave those alone, and don't edit the local
@@ -45,7 +60,8 @@ running against a supply.
 
 ## Architecture
 
-Four-layer split, small enough to hold in your head, but the threading boundary matters:
+The driver (`HMCSupplyCtrl`) is shared; everything else is one of two front ends. Small enough
+to hold in your head, but the threading boundary matters:
 
 - **`HMCSupplyCtrl`** (`hmcsupplyctrl.h/.cpp`) — the device driver. Owns the `QTcpSocket` and
   speaks SCPI text commands (`VOLT?`, `CURR?`, `OUTP:CHAN ON`, `INST OUT<n>`, etc.) synchronously
@@ -170,3 +186,37 @@ stylesheet; there is no light-theme path, so new widgets should rely on palette 
 hardcoded colors. The exception is the three `QLCDNumber` readouts, which
 `HMCChannelWidget::setupWidget` styles with explicit per-readout colors (green voltage, red
 current, orange power) — that colour coding is deliberate, so keep it if you touch those.
+
+### Quick (phone) UI — `quick/`
+
+- **`SupplyBackend`** (`quick/supplybackend.h/.cpp`) is the QML singleton (`QML_ELEMENT` +
+  `QML_SINGLETON`, created by the engine) and the Quick equivalent of `MainWindow`: it owns the
+  `HMCSupplyCtrl` by value and mirrors its state into properties. It calls into the driver only
+  via `QMetaObject::invokeMethod(&_ctrl, lambda)`, which queues the call onto the driver's thread
+  — so QML never sees a driver type and there are no request signals to misuse. Driver signals
+  come back through lambdas with `this` as context (queued to the GUI thread).
+- **`ChannelState`** is the per-channel GUI-thread mirror QML binds to (`SupplyBackend.channels`,
+  a `QQmlListProperty`). `has*` flags distinguish "no reading yet" from a real zero; `reset()`
+  keeps the device-reported limits.
+- **Shutdown** mirrors `MainWindow::closeEvent`: `shutdown()` runs once, on `aboutToQuit` or in
+  the destructor — `abortPendingIo()`, disconnect, then `cleanup()` over a blocking call. Keep it
+  once-only for the same deadlock reason.
+- QML: `Main.qml` is bootstrap only (window, `StackView`, error dialog); `SupplyPage` is the main
+  screen (`TabBar` + `SwipeView` of `ChannelPage`, connect/master buttons in the footer);
+  `SettingsPage` is pushed on the stack; dialogs are created through `Loader`s and open
+  themselves in `Component.onCompleted`. Files with delegates or loaded components use
+  `pragma ComponentBehavior: Bound`.
+- Dialogs (`AlertDialog`, `ConfirmDialog`, `ValueEntryDialog`) use an explicit `DialogButtonBox`
+  footer with `qsTr()` buttons, never `standardButtons`: those carry Qt's own system-locale
+  translations (a Polish system showed "Anuluj" beside English text). Their content always sits
+  in a `ColumnLayout` — a bare wrapping `Label` as popup content makes Material's
+  `Dialog.implicitHeight` binding depend on itself, since the label's height follows its width.
+- Style: Material dark from `quick/qtquickcontrols2.conf` (must live at the resource root, hence
+  its own `qt_add_resources` call). Sizes and semantic colours come from the `Theme` singleton —
+  don't hardcode them in pages.
+- Safety: turning the **master output on** asks for confirmation; turning it off is immediate.
+  Output switches re-bind to `channel.outputEnabled` after a tap, so they show the instrument's
+  readback rather than the tap.
+- Both UIs use the same `QSettings` identity, so the stored host address is shared.
+- `SupplyBackend::parseNumber()` accepts ',' as well as '.' — phone keyboards follow the system
+  locale — while the instrument always receives C-locale numbers.
