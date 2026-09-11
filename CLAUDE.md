@@ -25,12 +25,12 @@ never collide with the user's own Qt Creator builds:
 
 ```bash
 # desktop UI
-cmake -S . -B build/claude/widgets -DHMC_UI=Widgets -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.5/macos"
+cmake -S . -B build/claude/widgets -DHMC_UI=Widgets -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.8/macos"
 cmake --build build/claude/widgets
 open build/claude/widgets/HMCSupplyApp.app
 
 # phone UI (Qt >= 6.8), run on the desktop in a phone-sized window
-cmake -S . -B build/claude/quick -DHMC_UI=Quick -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.5/macos"
+cmake -S . -B build/claude/quick -DHMC_UI=Quick -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.8/macos"
 cmake --build build/claude/quick
 cmake --build build/claude/quick --target all_qmllint   # keep this at 0 warnings
 open build/claude/quick/quick/HMCSupplyMobile.app
@@ -43,17 +43,49 @@ default CMake search path on this machine.
 (MacOSX26.5) every source still compiles against 6.2.13, but linking fails with
 `ld: framework 'AGL' not found` — Apple dropped AGL and Qt 6.2.x still references it. That is an
 SDK/Qt-version mismatch, not a defect in this code, so don't chase it in the sources. Verified
-working: Qt 6.8.5.
+working: Qt 6.8.5 (since replaced by 6.8.8, the installed 6.8.x, for both `macos` and `ios`).
 
 The Widgets UI still builds against Qt 5.15 as well as Qt 6 (see the `QT_VERSION` branches in
 `CMakeLists.txt` and `valuesetdialog.cpp`); the Quick UI requires Qt 6.8+. Source lists are
 maintained by hand: driver files in `HMC_CORE_SOURCES` (static library `hmc_core`, linked by both
 UIs), Widgets files in `PROJECT_SOURCES`, Quick files (C++ and `QML_FILES`) in
-`quick/CMakeLists.txt`. No Android SDK or Qt-for-mobile kit is installed on this machine (the
-only iOS kit is Qt 6.2.13), so phone packaging can't be built or tested here.
+`quick/CMakeLists.txt`. No Android SDK is installed on this machine, so Android packaging can't be
+built or tested here.
+
+### iOS (Quick UI on a real iPhone)
+
+The Quick UI builds, signs, installs and runs on an iPhone with the **Qt 6.8.8 for iOS** kit and
+Xcode 26. It signs with the CS-Lab company team **`8TG52GRQZF`** (bundle id
+`eu.cs-lab.hmcsupplymobile`, from `quick/CMakeLists.txt`); the user's individual team
+`89VZ77ZY2R` has no valid profile, so don't use it. Agent builds use the Xcode generator via Qt's
+`qt-cmake` wrapper, which supplies the iOS toolchain:
+
+```bash
+~/Qt/6.8.8/ios/bin/qt-cmake -S . -B build/claude/ios -G Xcode -DHMC_UI=Quick \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=16 -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM=8TG52GRQZF
+cmake --build build/claude/ios --target ALL_BUILD --config Debug -- -allowProvisioningUpdates
+xcrun devicectl list devices                        # find the iPhone's identifier
+xcrun devicectl device install app --device <id> build/claude/ios/quick/Debug-iphoneos/HMCSupplyMobile.app
+xcrun devicectl device process launch --device <id> eu.cs-lab.hmcsupplymobile
+```
+
+The app bundle lands under `quick/<Config>-iphoneos/`, not the build root, because the target is
+defined in the `quick/` subdirectory. Troubleshooting:
+
+- **xcodebuild exit code 65** is a generic failure; the real error sits earlier in the log
+  (grep for `error:`). Signing errors ("login details … were rejected", "No profiles for …")
+  appear before anything compiles and are fixed in Xcode → Settings → Accounts, not in the code.
+- **"CoreDevice was unable to create bookmark data … denied by this process' sandbox"** during
+  Qt Creator's *Deploy* step means `devicectl` was given an app path that doesn't exist. It is not
+  a permissions problem, and granting Full Disk Access doesn't help. The usual cause is a
+  **stale run configuration**: after `HMC_UI` is switched in an existing build dir, Qt Creator
+  keeps a run configuration for the old target (shown as `Run  on iPhone16`, with an empty
+  target name, bound to `HMCSupplyApp`). Select *Run HMCSupplyMobile on …* instead, via the
+  UI — don't edit `CMakeLists.txt.user`.
 
 `build/` is gitignored and already contains Qt Creator's own configured build dirs
-(`Desktop_Qt_6_2_13_clang_64bit-{Debug,Release}`); leave those alone, and don't edit the local
+(`Desktop_Qt_6_2_13_clang_64bit-{Debug,Release}`, `Qt_6_8_8_for_iOS`,
+`Qt_6_8_8_for_iOS_Release`); leave those alone, and don't edit the local
 Qt Creator artifact `CMakeLists.txt.user` as part of feature work. There is no test suite, lint
 config, or CI in this repo, so verify changes by building and, when hardware is available,
 running against a supply.
