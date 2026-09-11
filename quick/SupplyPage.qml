@@ -27,7 +27,7 @@ Page {
             spacing: Theme.spacing
 
             Label {
-                text: "HMC8043"
+                text: "HMCSupplyApp"
                 font.pixelSize: Theme.title
                 elide: Text.ElideRight
                 Layout.fillWidth: true
@@ -98,6 +98,7 @@ Page {
     }
 
     footer: ToolBar {
+        height: 64
         RowLayout {
             anchors.fill: parent
             anchors.margins: Theme.spacing
